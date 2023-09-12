@@ -5,9 +5,17 @@ import { useTypedLoaderData } from "remix-typedjson";
 import type { loader as ExampleLoaderResponse } from "~/routes/docs.($slug)";
 import { useRoot } from "~/utils/providers/RootProvider";
 import SidebarLayout from "./Sidebar";
-import Header, { ClientHeader } from "../Header";
-import { ClientOnly } from "remix-utils";
+import Header from "../Header";
 import slugify from '@sindresorhus/slugify';
+import { useMediaQuery } from "usehooks-ts";
+import { ClientOnly } from "remix-utils";
+import clsx from "clsx";
+import redent from 'redent';
+import Editor from '../mdx/Editor';
+import SnippetGroup from '../mdx/Snippet';
+import Heading from "../mdx/Heading";
+import Info from "../mdx/Info";
+import Warn from "../mdx/Warn";
 
 export type Heading = {
   id: string;
@@ -28,8 +36,19 @@ export type Heading = {
 export function Doc() {
   const { code, frontmatter } = useTypedLoaderData<typeof ExampleLoaderResponse>();
   const { next, prev } = useRoot();
-  const Component = useMemo(() => getMDXComponent(code), [code]);
+  const Component = useMemo(() => getMDXComponent(code,
+    {
+      clsx,
+      redent,
+      Editor,
+      Snippet: SnippetGroup,
+      Heading,
+      Info,
+      Warn,
+    }
+  ), [code]);
   const location = useLocation();
+  const mobile = useMediaQuery('(max-width: 1024px)');
 
   const docRef = useRef<HTMLDivElement>(null!);
   const tocRef = useRef<HTMLOListElement>(null!);
@@ -41,7 +60,7 @@ export function Doc() {
   const [activeH2, setActiveH2] = useState<Element | HTMLElement | null>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && !mobile) {
       const headingElements = Array.from(docRef.current.querySelectorAll("h2, h3"));
       const toc: Heading[] = [];
 
@@ -97,10 +116,10 @@ export function Doc() {
 
       setListItems(listItems);
     }
-  }, [activeH2, activeHeading, headings, location]);
+  }, [activeH2, activeHeading, headings, location, mobile]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && !mobile) {
       const headingElements = Array.from(docRef.current.querySelectorAll("h2, h3"));
 
       function handleScroll() {
@@ -148,7 +167,7 @@ export function Doc() {
           setActiveHeading(activeHeading);
         }
 
-        if(!activeHeading) {
+        if (!activeHeading) {
           setActiveHeading(headings[0].element);
 
           if (headings[0].level === 2) {
@@ -164,10 +183,10 @@ export function Doc() {
 
       return () => window.removeEventListener("scroll", handleScroll);
     }
-  }, [headings, activeHeading, activeH2, location]);
+  }, [headings, activeHeading, activeH2, location, mobile]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && !mobile) {
       const scrollIntoView = (e: MouseEvent, el: Element) => {
         e.preventDefault();
 
@@ -243,25 +262,20 @@ export function Doc() {
         });
       };
     }
-  }, [listItems, location.pathname])
+  }, [listItems, location.pathname, mobile])
 
   return (
     <Fragment>
-      <ClientOnly
-        fallback={<ClientHeader />}
-        children={
-          () => <Header />
-        }
-      />
+      <ClientOnly fallback={<div>Header</div>} children={() => <Header title={frontmatter.title} section={frontmatter.section} />} />
       <SidebarLayout>
         <div className="max-w-3xl mx-auto pt-10 xl:max-w-none xl:ml-0 xl:mr-[15.5rem] xl:pr-16">
           <div className="flex-auto mb-8 scroll-smooth">
             <article>
               <header id="header" className="relative z-20">
                 <div>
-                  <p className="mb-2 text-sm font-semibold leading-6 text-sky-500 dark:text-sky-400">
+                  <h5 className="mb-2 text-sm font-semibold leading-6 text-sky-500 dark:text-sky-400">
                     {frontmatter.section}
-                  </p>
+                  </h5>
                   <div className="flex items-center">
                     <h1 className="inline-block text-2xl font-extrabold tracking-tight sm:text-3xl text-slate-900 dark:text-slate-200">
                       {frontmatter.title}
@@ -289,8 +303,8 @@ export function Doc() {
                     <Link
                       className="text-base font-semibold text-slate-500 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-300"
                       to={`/docs/${slugify(prev.shortTitle)}`}
-                      // reloadDocument={true}
-                      // prefetch="intent"
+                    // reloadDocument={true}
+                    // prefetch="intent"
                     >
                       <span aria-hidden="true">←</span>&nbsp;{prev.title}
                     </Link>
@@ -304,8 +318,8 @@ export function Doc() {
                     <Link
                       className="text-base font-semibold text-slate-500 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-300"
                       to={`/docs/${slugify(next.shortTitle)}`}
-                      // reloadDocument={true}
-                      // prefetch="intent"
+                    // reloadDocument={true}
+                    // prefetch="intent"
                     >
                       {next.title}
                       {/* */}&nbsp;<span aria-hidden="true">→</span>
