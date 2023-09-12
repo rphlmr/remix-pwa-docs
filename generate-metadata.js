@@ -1,4 +1,5 @@
 // Anytime push is made to `docs`, sync it with S3 bucket
+// run this before syncing to S3
 const grayMatter = require("gray-matter");
 const fs = require("fs");
 const path = require("path");
@@ -62,30 +63,28 @@ const metaData = async () => {
     { "name": "Guides", position: 5, children: [] }
   ];
 
-  // const postsMetadata = await getPostsMeta();
-
-  let sha;
+  const postsMetadata = await getPostsMeta();
 
   // if (process.env.NODE_ENV !== "development")
   //   sha = await getMetaDataSHA();
 
-  // postsMetadata.forEach((m) => {
-  //   const section = metadata.find(e => e.name === m.section);
+  postsMetadata.forEach((m) => {
+    const section = metadata.find(e => e.name === m.section);
 
-  //   if (section) {
-  //     section.children.push({
-  //       title: m.title,
-  //       description: m.description,
-  //       section: m.section,
-  //       shortTitle: m.shortTitle,
-  //       position: m.position
-  //     })
+    if (section) {
+      section.children.push({
+        title: m.title,
+        description: m.description,
+        section: m.section,
+        shortTitle: m.shortTitle,
+        position: m.position
+      })
 
-  //     section.children.sort((a, b) => a.position - b.position);
+      section.children.sort((a, b) => a.position - b.position);
 
-  //     metadata.sort((a, b) => a.position - b.position);
-  //   }
-  // })
+      metadata.sort((a, b) => a.position - b.position);
+    }
+  })
 
   const content = Buffer.from(JSON.stringify(metadata, null, 2)).toString("base64");
 

@@ -64,12 +64,63 @@
   {
     "name": "Routes & Worker API",
     "position": 2,
-    "children": []
+    "children": [
+      {
+        "title": "defaultFetchHandler",
+        "description": "defaultFetchHandler",
+        "section": "Routes & Worker API",
+        "shortTitle": "defaultFetchHandler",
+        "position": 1
+      },
+      {
+        "title": "errorHandler",
+        "description": "errorHandler",
+        "section": "Routes & Worker API",
+        "shortTitle": "errorHandler",
+        "position": 2
+      },
+      {
+        "title": "getLoadContext",
+        "description": "getLoadContext",
+        "section": "Routes & Worker API",
+        "shortTitle": "getLoadContext",
+        "position": 3
+      },
+      {
+        "title": "workerAction",
+        "description": "worker action description",
+        "section": "Routes & Worker API",
+        "shortTitle": "workerAction",
+        "position": 4
+      },
+      {
+        "title": "workerLoader",
+        "description": "workerLoader",
+        "section": "Routes & Worker API",
+        "shortTitle": "workerLoader",
+        "position": 5
+      }
+    ]
   },
   {
     "name": "Hooks & Components",
     "position": 3,
-    "children": []
+    "children": [
+      {
+        "title": "LiveReload",
+        "description": "Remix PWA LiveReload Component",
+        "section": "Hooks & Components",
+        "shortTitle": "LiveReload",
+        "position": 1
+      },
+      {
+        "title": "useSWEffect",
+        "description": "useSWEffect is a React hook exported from the @remix-pwa/sw package that updates the Service Worker with changes in the main thread.",
+        "section": "Hooks & Components",
+        "shortTitle": "useSWEffect",
+        "position": 2
+      }
+    ]
   },
   {
     "name": "Utilities",
