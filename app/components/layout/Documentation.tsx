@@ -5,7 +5,7 @@ import { useTypedLoaderData } from "remix-typedjson";
 import type { loader as ExampleLoaderResponse } from "~/routes/docs.($slug)";
 import { useRoot } from "~/utils/providers/RootProvider";
 import SidebarLayout from "./Sidebar";
-import Header from "../Header";
+import Header, { ClientHeader } from "../Header";
 import slugify from '@sindresorhus/slugify';
 import { useMediaQuery } from "usehooks-ts";
 import { ClientOnly } from "remix-utils";
@@ -21,7 +21,7 @@ export type Heading = {
   id: string;
   text: string;
   level: number;
-  element: Element;
+  element?: Element;
 };
 
 /**
@@ -53,55 +53,75 @@ export function Doc() {
   const docRef = useRef<HTMLDivElement>(null!);
   const tocRef = useRef<HTMLOListElement>(null!);
 
-  const [headings, setHeadings] = useState<Heading[]>([]);
   const [listItems, setListItems] = useState<any[]>([]);
 
-  const [activeHeading, setActiveHeading] = useState<Element | HTMLElement | null>(null);
-  const [activeH2, setActiveH2] = useState<Element | HTMLElement | null>(null);
+  const [activeHeading, setActiveHeading] = useState<Heading | null>(null);
+  const [activeH2, setActiveH2] = useState<Heading | null>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && !mobile) {
-      const headingElements = Array.from(docRef.current.querySelectorAll("h2, h3"));
-      const toc: Heading[] = [];
+    setListItems([]);
 
-      headingElements.map((heading) =>
-        toc.push({
-          text: heading.textContent!,
-          level: parseInt(heading.tagName[1]),
-          id: heading.id,
-          element: heading
-        })
-      );
+    if (typeof window !== "undefined") {
+      const storageKey = `docs:${location.pathname}`;
 
-      const found = headings[0] && headings[0].id === toc[0].id; // this takes time, optimise it later
+      if (docRef.current) {
+        const headingElements: HTMLHeadingElement[] = Array.from(docRef.current.querySelectorAll("h2, h3"));
+        const toc: Heading[] = [];
 
-      if (toc.length > 0 && !found) {
-        setHeadings(toc);
-        setActiveHeading(headingElements[0]);
+        headingElements.map((heading) =>
+          toc.push({
+            text: heading.textContent!,
+            level: parseInt(heading.tagName[1]),
+            id: heading.id ?? slugify(heading.textContent!),
+          })
+        );
+
+        if (toc.length === 0) {
+          return;
+        }
+
+        localStorage.setItem(storageKey, JSON.stringify(toc));
       }
 
-      let currentOl = null;
-      const listItems = [];
+      const pathHeadings = localStorage.getItem(storageKey);
 
-      for (let i = 0; i < headings.length; i++) {
-        const heading = headings[i];
+      let currentOl = null;
+      const $listItems = [];
+      const $headings: Heading[] = JSON.parse(pathHeadings ?? '[]');
+
+      if ($headings.length === 0) {
+        return;
+      }
+
+      setActiveHeading($headings[0]);
+
+      if ($headings[0].level === 2) {
+        setActiveH2($headings[0]);
+      }
+
+      if (!$headings) {
+        return;
+      }
+
+      for (let i = 0; i < $headings.length; i++) {
+        const heading = $headings[i];
 
         if (currentOl) {
-          listItems.push(currentOl);
+          $listItems.push(currentOl);
           currentOl = null;
         }
 
         const subheadings = [];
-        while (i + 1 < headings.length && headings[i + 1].level === 3) {
+        while (i + 1 < $headings.length && $headings[i + 1].level === 3) {
           subheadings.push(
             {
-              text: headings[i + 1].text,
+              text: $headings[i + 1].text,
             }
           );
           i++;
         }
 
-        listItems.push(
+        $listItems.push(
           {
             text: heading.text,
             subheadings: subheadings,
@@ -111,83 +131,91 @@ export function Doc() {
       }
 
       if (currentOl) {
-        listItems.push(currentOl);
+        $listItems.push(currentOl);
       }
 
-      setListItems(listItems);
+      setListItems($listItems);
     }
-  }, [activeH2, activeHeading, headings, location, mobile]);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && !mobile) {
-      const headingElements = Array.from(docRef.current.querySelectorAll("h2, h3"));
+      const headingElements: Heading[] = JSON.parse(localStorage.getItem(`docs:${location.pathname}`) ?? '[]');
+      setActiveHeading(headingElements[0] ?? null);
 
       function handleScroll() {
         if (headingElements.length === 0) {
           return;
         }
 
-        const topDistances = headingElements.map((headingElement) => ({
-          element: headingElement,
-          topDistance: Math.abs(headingElement.getBoundingClientRect().top - 109)
-        }));
+        const topDistances = headingElements.map((headingElement) => {
+          const elem = docRef.current.querySelector(`#${headingElement.id}`);
+
+          if (!elem) return null;
+
+          return {
+            element: elem!,
+            topDistance: Math.abs(elem!.getBoundingClientRect().top - 109)
+          }
+        }).filter((heading) => heading !== null) as unknown as { element: Element, topDistance: number }[];
 
         topDistances.sort((a, b) => a.topDistance - b.topDistance);
         const closestHeadingElement = topDistances[0].element;
-        const closestHeading = headings.find((heading) => heading.id === closestHeadingElement.id);
+        const closestHeading = headingElements.find((heading) => heading.id === closestHeadingElement.id);
 
         if (!closestHeading) {
           return;
         }
 
-        const activeIndex = headings.findIndex((h) => h.id === closestHeading!.id);
+        const activeIndex = headingElements.findIndex((h) => h.id === closestHeading!.id);
+
+        const activeIndexIsGreaterThanZero = activeIndex > 0;
 
         // Update the active heading if it's different from the current active heading
-        if (closestHeading && closestHeading.id !== activeHeading!.id) {
-          if (activeIndex > 0 && headings[activeIndex].level === 3) {
+        if (!activeHeading || closestHeading.id !== activeHeading.id) {
+          if (activeIndexIsGreaterThanZero && headingElements[activeIndex].level === 3) {
             // Find the index of the last level 2 (h2) heading before the active heading
             for (let i = activeIndex - 1; i >= 0; i--) {
-              if (headings[i].level === 2) {
-                const lastH2 = headings[i];
-                lastH2 !== undefined && setActiveH2(lastH2.element);
+              if (headingElements[i].level === 2) {
+                const lastH2 = headingElements[i];
+                lastH2 !== undefined && setActiveH2(lastH2);
                 break;
               }
             }
           }
 
-          if (activeIndex > 0 && headings[activeIndex].level === 2) {
-            setActiveH2(closestHeading.element);
+          if (headingElements[activeIndex].level === 2) {
+            setActiveH2(closestHeading);
           }
 
-          setActiveHeading(closestHeading.element);
+          setActiveHeading(closestHeading);
         }
 
-        if (activeHeading?.tagName.includes("2") && activeH2?.id !== activeHeading.id) {
+        if (activeHeading?.level === 2 && activeH2?.id !== activeHeading.id) {
           setActiveH2(activeHeading);
-          setActiveHeading(activeHeading);
-        }
-
-        if (!activeHeading) {
-          setActiveHeading(headings[0].element);
-
-          if (headings[0].level === 2) {
-            setActiveH2(headings[0].element);
-          }
         }
       }
 
       window.addEventListener("scroll", handleScroll, {
         passive: true,
-        capture: true
+        capture: true,
+        once: false,
       });
 
-      return () => window.removeEventListener("scroll", handleScroll);
+      return () => window.removeEventListener("scroll", handleScroll, {
+        capture: true
+      });
     }
-  }, [headings, activeHeading, activeH2, location, mobile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location, mobile]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && !mobile) {
       const scrollIntoView = (e: MouseEvent, el: Element) => {
+        if (!el.parentNode?.nodeName.toUpperCase().includes('H')) {
+          return;
+        }
+
         e.preventDefault();
 
         const scrollTo = docRef.current.querySelector(`#${el.getAttribute('href')!.replace('#', '')}`);
@@ -205,32 +233,40 @@ export function Doc() {
         }
       };
 
+      const scrollIntoviewToC = (e: MouseEvent, el: HTMLAnchorElement) => {
+        if (!el.parentNode?.nodeName.toUpperCase().includes('H')) {
+          el.setAttribute('target', '_blank');
+          el.click();
+          return;
+        }
+
+        e.preventDefault();
+
+        const hrefAttr = el.getAttribute('href')!;
+        const substr = hrefAttr.search('#');
+        const href = hrefAttr.substring(substr + 1);
+
+        const scrollTo = docRef.current.querySelector(`#${href}`);
+
+        if (scrollTo) {
+          const scrollToRect = scrollTo.getBoundingClientRect();
+          const offsetPos = scrollToRect.top + window.scrollY - 106;
+
+          window.history.pushState(null, '', `${location.pathname}#${el.getAttribute('href')!.replace('#', '')}`);
+
+          window.scrollTo({
+            top: offsetPos,
+            behavior: 'smooth'
+          });
+        }
+      }
+
       docRef.current.querySelectorAll('a').forEach((el) => {
         el.addEventListener('click', (e) => scrollIntoView(e, el))
       });
 
       tocRef.current.querySelectorAll('a').forEach((el) => {
-        el.addEventListener('click', (e) => {
-          e.preventDefault();
-
-          const hrefAttr = el.getAttribute('href')!;
-          const substr = hrefAttr.search('#');
-          const href = hrefAttr.substring(substr + 1);
-
-          const scrollTo = docRef.current.querySelector(`#${href}`);
-
-          if (scrollTo) {
-            const scrollToRect = scrollTo.getBoundingClientRect();
-            const offsetPos = scrollToRect.top + window.scrollY - 106;
-
-            window.history.pushState(null, '', `${location.pathname}#${el.getAttribute('href')!.replace('#', '')}`);
-
-            window.scrollTo({
-              top: offsetPos,
-              behavior: 'smooth'
-            });
-          }
-        })
+        el.addEventListener('click', (e) => scrollIntoviewToC(e, el))
       });
 
       return () => {
@@ -266,7 +302,7 @@ export function Doc() {
 
   return (
     <Fragment>
-      <ClientOnly fallback={<div>Header</div>} children={() => <Header title={frontmatter.title} section={frontmatter.section} />} />
+      <ClientOnly fallback={<ClientHeader />} children={() => <Header title={frontmatter.title} section={frontmatter.section} />} />
       <SidebarLayout>
         <div className="max-w-3xl mx-auto pt-10 xl:max-w-none xl:ml-0 xl:mr-[15.5rem] xl:pr-16">
           <div className="flex-auto mb-8 scroll-smooth">
@@ -306,7 +342,7 @@ export function Doc() {
                     // reloadDocument={true}
                     // prefetch="intent"
                     >
-                      <span aria-hidden="true">←</span>&nbsp;{prev.title}
+                      <span aria-hidden="true">←</span>&nbsp;{prev.shortTitle}
                     </Link>
                   </dd>
                 </div>
@@ -321,7 +357,7 @@ export function Doc() {
                     // reloadDocument={true}
                     // prefetch="intent"
                     >
-                      {next.title}
+                      {next.shortTitle}
                       {/* */}&nbsp;<span aria-hidden="true">→</span>
                     </Link>
                   </dd>
@@ -331,9 +367,9 @@ export function Doc() {
           </div>
           <div className="fixed z-20 top-[3.8125rem] bottom-0 right-[max(0px,calc(50%-45rem))] w-[19.5rem] py-10 overflow-y-auto hidden xl:block">
             <nav aria-labelledby="on-this-page-title" className="px-8">
-              <h2 id="on-this-page-title" className="mb-4 text-sm font-semibold leading-6 text-slate-900 dark:text-slate-100">
+              {listItems.length > 0 ? <h2 id="on-this-page-title" className="mb-4 text-sm font-semibold leading-6 text-slate-900 dark:text-slate-100">
                 On this page
-              </h2>
+              </h2> : <h5></h5>}
               <ol className="text-sm leading-6 text-slate-700" id="toc-id" ref={tocRef}>
                 {
                   listItems.map((item, i) => {
