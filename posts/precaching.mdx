@@ -3,7 +3,7 @@ title: Precaching
 description: Caching before you need it. Explore precaching and learn how to cache before your users even know they need it.
 shortTitle: Precaching
 section: Guides
-position: 3
+position: 4
 ---
 
 {/* Do not remove these lines! */}
@@ -72,7 +72,7 @@ information to precache on first render only.
 
 ### JiT Caching vs Precaching
 
-JiT (Just-in-Time) caching is a caching strategy where data is cached and retrieved dynamically as needed, rather than preloading and storing all possible data in advance.
+JiT (Just-in-Time) caching (or cache-as-needed) is a caching strategy where data is cached and retrieved dynamically as needed, rather than preloading and storing all possible data in advance.
 This is typically **after** the user has navigated to the page and the asset has been fetched by the network.
 
 Precaching is the process of caching (preloading) assets before they are needed. Hence, the fetching occurs only in the Service Worker and when the user navigates to the page, 
@@ -91,17 +91,17 @@ When implementing caching strategies with service workers. Each approach (precac
 Pre-caching involves fetching and storing critical assets and data in the cache before they are actually needed. These assets are typically determined at build time 
 or during the initial application load. Pre-caching is beneficial in the following scenarios:
 
-- Offline-First Apps: When building offline-first applications, precaching ensures that essential resources are available even when the user is offline. This is ideal for progressive web apps (PWAs) and mobile applications that require seamless offline functionality.
-- Performance Optimization: Precaching can improve page load times by serving cached assets directly from the service worker, reducing the need for network requests. This is especially valuable for frequently accessed resources like images, stylesheets, and scripts.
-- Predictable Resource Availability: By precaching, you can ensure that specific versions of assets are consistently available, reducing the risk of serving outdated content to users.
+- **Offline-First Apps:** When building offline-first applications, precaching ensures that essential resources are available even when the user is offline. This is ideal for progressive web apps (PWAs) and mobile applications that require seamless offline functionality.
+- **Performance Optimization:** Precaching can improve page load times by serving cached assets directly from the service worker, reducing the need for network requests. This is especially valuable for frequently accessed resources like images, stylesheets, and scripts.
+- **Predictable Resource Availability:** By precaching, you can ensure that specific versions of assets are consistently available, reducing the risk of serving outdated content to users.
 
 **JiT (Just-In-Time) Caching:**
 
 JIT caching, on the other hand, fetches and caches assets only when they are requested. This approach is dynamic and fetches resources in response to user interactions or application logic. JIT caching is advantageous in these situations:
 
-- Dynamic Content: When dealing with content that changes frequently, such as user-generated data or real-time updates, JIT caching ensures that the freshest data is always retrieved.
-- Resource Efficiency: JIT caching can be more resource-efficient because it doesn't pre-cache all assets, potentially saving storage space and reducing initial load times.
-- Adaptive Caching: JIT caching adapts to user behavior and application needs. It can be configured to cache only what's necessary, reducing unnecessary caching and minimizing cache maintenance.
+- **Dynamic Content:** When dealing with content that changes frequently, such as user-generated data or real-time updates, JIT caching ensures that the freshest data is always retrieved.
+- **Resource Efficiency:** JIT caching can be more resource-efficient because it doesn't pre-cache all assets, potentially saving storage space and reducing initial load times.
+- **Adaptive Caching:** JIT caching adapts to user behavior and application needs. It can be configured to cache only what's necessary, reducing unnecessary caching and minimizing cache maintenance.
 
 In summary, the choice between pre-caching and JIT caching depends on your web application's specific requirements and usage patterns. Pre-caching is suitable for delivering a consistent experience in offline and high-performance scenarios, 
 while JIT caching excels in situations where resource freshness, efficiency, and adaptability are paramount.
